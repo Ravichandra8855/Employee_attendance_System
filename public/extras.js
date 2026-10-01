@@ -199,4 +199,17 @@
       await api("/employees/" + e.id, { method: "PUT", body: f });
       show("Employees");
     });
+    const L2=V.Leaves;
+V.Leaves=async()=>{
+  await L2();
+  const L=await api('/leaves');
+  document.querySelectorAll('#view .card.tw table tr').forEach((tr,i)=>{
+    if(i===0) tr.insertAdjacentHTML('beforeend','<th>Cancel</th>');
+    else if(L[i-1]) tr.insertAdjacentHTML('beforeend', L[i-1].status==='pending'
+      ? `<td><button class="r" onclick="cancelLeave(${L[i-1].id})">Cancel</button></td>`
+      : '<td>🔒</td>');
+  });
+};
+window.cancelLeave=id=>{ if(!confirm('Cancel this leave request?')) return;
+  go(async()=>{await api('/leaves/'+id,{method:'DELETE'});show('Leaves')}); };
 })();
