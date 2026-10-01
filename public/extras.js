@@ -123,40 +123,80 @@
       show("Employees");
     });
 
-  window.chpw=()=>go(async()=>{
-  const o=prompt('Old password'); if(o===null) return;
-  const n=prompt('New password (min 8 characters)'); if(n===null) return;
-  await api('/me/password',{method:'POST',body:{old_password:o,new_password:n}});
-  alert('Password changed. Please log in again.'); logout();
-});
-document.querySelector('header').insertAdjacentHTML('beforeend','<button class="s" onclick="chpw()">Change password</button>');
- window.chem=()=>go(async()=>{
-  if(ME.role!=='admin') return alert('Only an admin can change emails');
-  const e=prompt('New email address'); if(!e) return;
-  await api('/employees/'+ME.id,{method:'PUT',body:{email:e}});
-  alert('Email changed. Please log in with the new email.'); logout();
-});
-document.querySelector('header').insertAdjacentHTML('beforeend','<button class="s" onclick="chem()">Change email</button>');
-const E2=V.Employees;
-V.Employees=async()=>{
-  await E2();
-  const E=await api('/employees'); window._E=E;
-  const rows=document.querySelectorAll('#view .card.tw table tr');
-  rows.forEach((tr,i)=>{
-    if(i===0) tr.insertAdjacentHTML('beforeend','<th>Edit</th>');
-    else tr.insertAdjacentHTML('beforeend',`<td><button onclick="editEmp(${i-1})">Edit</button></td>`);
-  });
-};
-window.editEmp=i=>go(async()=>{
-  const e=window._E[i], f={};
-  for(const [k,l] of [['name','Name'],['email','Email'],['dept','Department'],['grade','Grade'],['tio_pct','TIO % (0-100)']]){
-    const v=prompt(l,e[k]); if(v===null) return;
-    f[k]=k==='tio_pct'?+v:v.trim();
-  }
-  if(isNaN(f.tio_pct)||f.tio_pct<0||f.tio_pct>100) return alert('TIO % must be between 0 and 100');
-  const p=prompt('New password (leave blank to keep the current one)'); if(p===null) return;
-  if(p){ if(p.length<8) return alert('Password must be at least 8 characters'); f.password=p; }
-  await api('/employees/'+e.id,{method:'PUT',body:f});
-  show('Employees');
-});
+  window.chpw = () =>
+    go(async () => {
+      const o = prompt("Old password");
+      if (o === null) return;
+      const n = prompt("New password (min 8 characters)");
+      if (n === null) return;
+      await api("/me/password", {
+        method: "POST",
+        body: { old_password: o, new_password: n },
+      });
+      alert("Password changed. Please log in again.");
+      logout();
+    });
+  document
+    .querySelector("header")
+    .insertAdjacentHTML(
+      "beforeend",
+      '<button class="s" onclick="chpw()">Change password</button>',
+    );
+  window.chem = () =>
+    go(async () => {
+      if (ME.role !== "admin") return alert("Only an admin can change emails");
+      const e = prompt("New email address");
+      if (!e) return;
+      await api("/employees/" + ME.id, { method: "PUT", body: { email: e } });
+      alert("Email changed. Please log in with the new email.");
+      logout();
+    });
+  document
+    .querySelector("header")
+    .insertAdjacentHTML(
+      "beforeend",
+      '<button class="s" onclick="chem()">Change email</button>',
+    );
+  const E2 = V.Employees;
+  V.Employees = async () => {
+    await E2();
+    const E = await api("/employees");
+    window._E = E;
+    const rows = document.querySelectorAll("#view .card.tw table tr");
+    rows.forEach((tr, i) => {
+      if (i === 0) tr.insertAdjacentHTML("beforeend", "<th>Edit</th>");
+      else
+        tr.insertAdjacentHTML(
+          "beforeend",
+          `<td><button onclick="editEmp(${i - 1})">Edit</button></td>`,
+        );
+    });
+  };
+  window.editEmp = (i) =>
+    go(async () => {
+      const e = window._E[i],
+        f = {};
+      for (const [k, l] of [
+        ["name", "Name"],
+        ["email", "Email"],
+        ["dept", "Department"],
+        ["grade", "Grade"],
+        ["tio_pct", "TIO % (0-100)"],
+      ]) {
+        const v = prompt(l, e[k]);
+        if (v === null) return;
+        f[k] = k === "tio_pct" ? +v : v.trim();
+      }
+      if (isNaN(f.tio_pct) || f.tio_pct < 0 || f.tio_pct > 100)
+        return alert("TIO % must be between 0 and 100");
+      const p = prompt("New password (leave blank to keep the current one)");
+      if (p === null) return;
+      if (p) {
+        if (p.length < 8)
+          return alert("Password must be at least 8 characters");
+        f.password = p;
+      }
+      await api("/employees/" + e.id, { method: "PUT", body: f });
+      show("Employees");
+    });
 })();
