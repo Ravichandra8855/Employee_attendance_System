@@ -34,6 +34,7 @@ if (!db.prepare('SELECT 1 FROM users LIMIT 1').get()) {
 
 const today = () => new Date().toLocaleDateString('en-CA', { timeZone: TZ }); // YYYY-MM-DD
 const app = express();
+app.set('trust proxy', 1);
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
