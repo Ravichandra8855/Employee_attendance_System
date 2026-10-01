@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Attendance & Time in Office</title>
+<style>
+:root{--navy:#0b2a5b;--ac:#1d4ed8;--bg:#f1f4f9;--bd:#e2e6ee;--ok:#16a34a;--bad:#dc2626}
+*{box-sizing:border-box}body{margin:0;font:14px system-ui,Segoe UI,Roboto,sans-serif;background:var(--bg);color:#1b2433}
+#login{max-width:340px;margin:12vh auto;background:#fff;padding:28px;border-radius:14px;box-shadow:0 4px 20px #0001}
+#app{display:none;min-height:100vh}
+aside{position:fixed;inset:0 auto 0 0;width:190px;background:var(--navy);padding:14px 8px}
+aside h3{color:#fff;margin:6px 10px 20px;font-size:15px}
+aside a{display:block;color:#cdd8ee;padding:10px 12px;border-radius:8px;cursor:pointer;margin-bottom:4px}
+aside a.on{background:var(--ac);color:#fff}
+.main{margin-left:190px}
+header{background:#fff;padding:12px 22px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--bd);flex-wrap:wrap;gap:8px}
+header b{font-size:18px;color:var(--navy)}header small{display:block}
+.content{padding:18px}
+.card{background:#fff;border-radius:12px;padding:16px;margin-bottom:16px;box-shadow:0 1px 3px #0001}
+h2{margin:0 0 12px;text-align:center;color:var(--navy)}h4{margin:0 0 10px;color:var(--navy);font-size:16px}
+.kpis{display:flex;border:1px solid var(--bd);border-radius:8px;background:#fafbfd;flex-wrap:wrap}
+.kpis div{flex:1;min-width:120px;text-align:center;padding:12px 6px;border-right:1px solid var(--bd);font-size:11px;font-weight:700;text-transform:uppercase}
+.kpis span{display:block;font-size:22px;margin-top:6px}
+.yes{color:var(--ok);font-weight:700}.no{color:var(--bad);font-weight:700}
+.tw{overflow-x:auto}table{width:100%;border-collapse:collapse}
+th{background:var(--navy);color:#fff;font-size:11px;text-transform:uppercase;padding:10px 6px;white-space:nowrap}
+td{padding:8px 6px;border-bottom:1px solid var(--bd);text-align:center;white-space:nowrap}
+tr:nth-child(even) td{background:#f7f9fc}
+.g{background:#bbf7d0!important;font-weight:700}.b{background:#bfdbfe!important;font-weight:700}
+input,select{padding:9px;border:1px solid #cbd2de;border-radius:8px;font:inherit}
+button{background:var(--ac);color:#fff;border:0;border-radius:8px;padding:9px 14px;font:inherit;font-weight:600;cursor:pointer}
+button.r{background:var(--bad)}button.k{background:var(--ok)}button.s{background:#64748b}
+.f{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.chart{display:flex;align-items:flex-end;gap:10px;height:200px;border-bottom:1px solid var(--bd);padding-top:20px}
+.col{flex:1;text-align:center;display:flex;flex-direction:column;justify-content:flex-end;height:100%}
+.bar{border-radius:4px 4px 0 0;min-height:2px}.lab{font-size:11px;margin-top:4px}
+.clock{font-size:38px;font-weight:700;text-align:center}
+@media(max-width:700px){aside{position:static;width:auto;display:flex;overflow-x:auto}aside h3{display:none}.main{margin:0}}
+</style></head><body>
+<div id="login"><h3>ABC Technologies — Sign in</h3>
+<div class="f"><input id="em" placeholder="Email" style="flex:1 1 100%"><input id="pw" type="password" placeholder="Password" style="flex:1 1 100%"></div>
+<button onclick="login()" style="width:100%">Sign in</button><p id="le" class="no"></p></div>
+<div id="app"><aside><h3>🏢 Attendance</h3><div id="nav"></div></aside>
+<div class="main"><header><div><b>ABC Technologies Pvt. Ltd.</b><small>Attendance & Time in Office System</small></div>
+<div id="who"></div></header><div class="content" id="view"></div></div></div>
+<script>
+const $=s=>document.querySelector(s); let ME,view;
+const T=()=>localStorage.getItem('tk');
+async function api(p,o={}){const r=await fetch('/api'+p,{method:o.method||'GET',headers:{'Content-Type':'application/json',Authorization:'Bearer '+T()},body:o.body&&JSON.stringify(o.body)});
+  const d=await r.json().catch(()=>({}));if(r.status===401&&p!=='/login'){logout();throw new Error('Session expired')}
+  if(!r.ok)throw new Error(d.error||'Request failed');return d}
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const hm=t=>t?new Date(t).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'—';
+const go=async(fn)=>{try{await fn()}catch(e){alert(e.message)}};
+async function login(){try{const d=await api('/login',{method:'POST',body:{email:$('#em').value,password:$('#pw').value}});
+  localStorage.setItem('tk',d.token);boot()}catch(e){$('#le').textContent=e.message}}
+function logout(){localStorage.removeItem('tk');location.reload()}
+async function boot(){if(!T())return;try{ME=await api('/me')}catch{return}
+  $('#login').style.display='none';$('#app').style.display='block';
+  $('#who').innerHTML=`<b>${esc(ME.name)}</b> (${esc(ME.role)}) <button class="s" onclick="logout()">Logout</button>`;
+  const tabs=ME.role==='admin'?['Dashboard','Attendance','Reports','Employees','Leaves','Approvals','Regularize','Shifts','Holidays','Audit']:['Attendance','Leaves','Regularize'].concat(ME.role==='manager'?['Approvals']:[]);
+  $('#nav').innerHTML=tabs.map(t=>`<a id="n${t}" onclick="show('${t}')">${t}</a>`).join('');show(tabs[0])}
+function show(t){view=t;document.querySelectorAll('aside a').forEach(a=>a.classList.toggle('on',a.id==='n'+t));go(V[t])}
+const V={
+async Dashboard(){
+  const y=V.y||new Date().getFullYear(),d=V.d||'All',D=await api(`/dashboard?year=${y}&dept=${encodeURIComponent(d)}`),s=D.summary;
+  const max=Math.max(1,...D.monthly.map(m=>m.avg_days));
+  $('#view').innerHTML=`<div class="f"><select onchange="V.y=+this.value;show('Dashboard')">${[y-1,y,y+1].map(x=>`<option ${x==y?'selected':''}>${x}</option>`)}</select>
+  <select onchange="V.d=this.value;show('Dashboard')"><option>All</option>${D.depts.map(x=>`<option ${x==d?'selected':''}>${esc(x)}</option>`)}</select></div>
+  <div class="card"><h2>TIME IN OFFICE – COMPLIANCE SUMMARY</h2><div style="text-align:right">Data as on: ${s.as_on}</div>
+  <div class="kpis"><div>Declared holidays<span>${s.declared_holidays}</span></div><div>Approved leaves<span>${s.approved_leaves.toFixed(1)}</span></div>
+  <div>Approved ETO<span>${s.approved_eto.toFixed(1)}</span></div><div>Days required<span>${s.days_required}</span></div>
+  <div>Days in office<span>${s.days_in_office}</span></div><div>Additional days needed<span>${s.additional_required}</span></div>
+  <div>Is compliant<span class="${s.is_compliant?'yes':'no'}">${s.is_compliant?'YES':'NO'}</span></div></div></div>
+  <div class="card tw"><table><tr><th>Emp ID</th><th>Name</th><th>Grade</th><th>Year</th><th>Month</th><th>% TIO</th><th>Working days</th><th>Holidays</th><th>Leaves</th><th>ETO</th><th>Required</th><th>In office</th><th>Avg hrs</th><th>Compliant</th></tr>
+  ${D.rows.map(r=>`<tr><td>${esc(r.emp_id)}</td><td>${esc(r.name)}</td><td>${esc(r.grade)}</td><td>${r.year}</td><td>${r.month}</td><td>${r.tio_pct}</td><td>${r.working_days}</td><td>${r.holidays}</td><td>${r.leaves}</td><td>${r.eto}</td><td class="g">${r.required}</td><td class="b">${r.in_office}</td><td>${r.avg_hours}</td><td class="${r.compliant?'yes':'no'}">${r.compliant?'YES':'NO'}</td></tr>`).join('')||'<tr><td colspan="14">No data</td></tr>'}</table></div>
+  <div class="card"><h4>Monthly Compliance (avg office days per employee)</h4><div class="chart">${D.monthly.map(m=>`<div class="col"><small>${m.avg_days}</small><div class="bar" style="height:${m.avg_days/max*85}%;background:${m.compliant?'#16a34a':'#dc2626'}"></div><div class="lab">${m.month.slice(0,3)}</div></div>`).join('')}</div>
+  <p style="text-align:center"><span class="yes">■ Compliant</span> &nbsp; <span class="no">■ Not compliant</span></p></div>`},
+async Attendance(){
+  const m=V.m||new Date().toISOString().slice(0,7),A=await api('/attendance?month='+m);
+  const open=A.find(a=>!a.punch_out&&a.date===new Date().toLocaleDateString('en-CA'));
+  $('#view').innerHTML=`<div class="card"><div class="clock" id="clk"></div><div class="f" style="justify-content:center;margin-top:12px">
+  <select id="loc"><option value="office">Office</option><option value="remote">Remote</option></select>
+  <button class="k" ${open?'disabled':''} onclick="punch('in')">Punch in</button><button class="r" ${open?'':'disabled'} onclick="punch('out')">Punch out</button></div></div>
+  <div class="card"><div class="f"><input type="month" value="${m}" onchange="V.m=this.value;show('Attendance')"></div><div class="tw"><table><tr><th>Date</th><th>In</th><th>Out</th><th>Hours</th><th>Location</th></tr>
+  ${A.map(a=>`<tr><td>${a.date}</td><td>${hm(a.punch_in)}</td><td>${hm(a.punch_out)}</td><td>${a.punch_out?((a.punch_out-a.punch_in)/36e5).toFixed(2):'—'}</td><td>${a.location}</td></tr>`).join('')||'<tr><td colspan="5">No records</td></tr>'}</table></div></div>`;
+  clearInterval(V.t);const tick=()=>{const c=$('#clk');c&&(c.textContent=new Date().toLocaleTimeString())};tick();V.t=setInterval(tick,1000)},
+async Employees(){
+  const E=await api('/employees');
+  $('#view').innerHTML=`<div class="card"><h4>Add employee</h4><div class="f">
+  ${['emp_id','name','email','dept','grade'].map(k=>`<input id="e_${k}" placeholder="${k}">`).join('')}<input id="e_tio_pct" type="number" value="60" style="width:80px">
+  <input id="e_password" type="password" placeholder="password (8+)"><select id="e_role"><option>employee</option><option>admin</option></select>
+  <button onclick="addEmp()">Add</button></div></div>
+  <div class="card tw"><table><tr><th>ID</th><th>Name</th><th>Email</th><th>Dept</th><th>Grade</th><th>% TIO</th><th>Role</th><th>Active</th><th></th></tr>
+  ${E.map(e=>`<tr><td>${esc(e.emp_id)}</td><td>${esc(e.name)}</td><td>${esc(e.email)}</td><td>${esc(e.dept)}</td><td>${esc(e.grade)}</td><td>${e.tio_pct}</td><td>${e.role}</td><td>${e.active?'Yes':'No'}</td>
+  <td><button class="s" onclick="toggleEmp(${e.id},${e.active?0:1})">${e.active?'Deactivate':'Activate'}</button></td></tr>`).join('')}</table></div>`},
+async Leaves(){
+  const L=await api('/leaves'),adm=ME.role==='admin';
+  $('#view').innerHTML=`<div class="card"><h4>Apply leave / ETO</h4><div class="f"><input type="date" id="ld"><select id="lt"><option value="leave">Leave</option><option value="eto">ETO</option></select><button onclick="addLeave()">Submit</button></div></div>
+  <div class="card tw"><table><tr>${adm?'<th>Employee</th>':''}<th>Date</th><th>Type</th><th>Status</th>${adm?'<th></th>':''}</tr>
+  ${L.map(l=>`<tr>${adm?`<td>${esc(l.emp_id)} ${esc(l.name)}</td>`:''}<td>${l.date}</td><td>${l.type}</td><td>${l.status}</td>
+  ${adm?`<td><button class="k" onclick="setLeave(${l.id},'approved')">Approve</button> <button class="r" onclick="setLeave(${l.id},'rejected')">Reject</button></td>`:''}</tr>`).join('')||'<tr><td colspan="5">None</td></tr>'}</table></div>`},
+async Holidays(){
+  const H=await api('/holidays');
+  $('#view').innerHTML=`<div class="card"><h4>Declare holiday</h4><div class="f"><input type="date" id="hd"><input id="hn" placeholder="Name"><button onclick="addHol()">Add</button></div></div>
+  <div class="card tw"><table><tr><th>Date</th><th>Name</th><th></th></tr>${H.map(h=>`<tr><td>${h.date}</td><td>${esc(h.name)}</td><td><button class="r" onclick="delHol('${h.date}')">Delete</button></td></tr>`).join('')}</table></div>`}
+};
+const punch=a=>go(async()=>{const loc=$('#loc').value;let c={};if(a==='in'&&loc==='office'&&navigator.geolocation)c=await new Promise(r=>navigator.geolocation.getCurrentPosition(p=>r({lat:p.coords.latitude,lng:p.coords.longitude}),()=>r({}),{timeout:5000}));await api('/punch',{method:'POST',body:{action:a,location:loc,...c}});show('Attendance')});
+const addEmp=()=>go(async()=>{const b={};['emp_id','name','email','dept','grade','tio_pct','password','role'].forEach(k=>b[k]=$('#e_'+k).value);await api('/employees',{method:'POST',body:b});show('Employees')});
+const toggleEmp=(id,a)=>go(async()=>{await api('/employees/'+id,{method:'PUT',body:{active:a}});show('Employees')});
+const addLeave=()=>go(async()=>{await api('/leaves',{method:'POST',body:{date:$('#ld').value,type:$('#lt').value}});show('Leaves')});
+const setLeave=(id,s)=>go(async()=>{await api('/leaves/'+id,{method:'PATCH',body:{status:s}});show('Leaves')});
+const addHol=()=>go(async()=>{await api('/holidays',{method:'POST',body:{date:$('#hd').value,name:$('#hn').value}});show('Holidays')});
+const delHol=d=>go(async()=>{await api('/holidays/'+d,{method:'DELETE'});show('Holidays')});
+$('#pw').addEventListener('keydown',e=>e.key==='Enter'&&login());boot();
+</script><script src="extras.js"></script></body></html>

@@ -1,0 +1,13 @@
+services:
+  attendance:
+    build: .
+    ports: ["3000:3000"]
+    environment:
+      JWT_SECRET: "${JWT_SECRET:?set JWT_SECRET}"
+      TZ_NAME: "Asia/Kolkata"
+      # OFFICE_IPS: "203.0.113.10,203.0.113.11"      # optional: office public IPs
+      # OFFICE_LAT: "12.9716"  OFFICE_LNG: "77.5946"  OFFICE_RADIUS_M: "200"   # optional geofence
+    volumes: ["attendance-data:/data"]
+    restart: unless-stopped
+volumes:
+  attendance-data:
